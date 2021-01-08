@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	uuid "github.com/gofrs/uuid"
+	"github.com/gogf/gf/frame/g"
+	"github.com/gogf/gf/net/ghttp"
 )
 
 const (
@@ -61,69 +62,118 @@ func NewOAuthBearerServer(secretKey string,
 }
 
 // UserCredentials manages password grant type requests
-func (s *OAuthBearerServer) UserCredentials(ctx *gin.Context) {
-	grantType := ctx.PostForm("grant_type")
+func (s *OAuthBearerServer) UserCredentials(r *ghttp.Request) {
+	grantType := r.GetString("grant_type")
 	// grant_type password variables
-	username := ctx.PostForm("username")
-	password := ctx.PostForm("password")
-	scope := ctx.PostForm("scope")
+	username := r.GetString("username")
+	password := r.GetString("password")
+	scope := r.GetString("scope")
 	if username == "" || password == "" {
 		// get username and password from basic authorization header
 		var err error
-		username, password, err = GetBasicAuthentication(ctx)
+		username, password, err = GetBasicAuthentication(r)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, "Not authorized")
+			r.Response.WriteJson(
+				g.Map{
+					"code": http.StatusUnauthorized,
+					"msg":  "Not authorized",
+				})
 			return
 		}
 	}
 	// grant_type refresh_token
-	refreshToken := ctx.PostForm("refresh_token")
-	code, resp := s.generateTokenResponse(grantType, username, password, refreshToken, scope, "", "", ctx.Request)
-	ctx.JSON(code, resp)
+	refreshToken := r.GetString("refresh_token")
+	code, resp := s.generateTokenResponse(grantType, username, password, refreshToken, scope, "", "", r.Request)
+	if code == http.StatusOK {
+		r.Response.WriteJson(
+			g.Map{
+				"code":          code,
+				"TokenResponse": resp,
+			})
+	} else {
+		r.Response.WriteJson(
+			g.Map{
+				"code": code,
+				"msg":  resp,
+			})
+	}
 }
 
 // ClientCredentials manages client credentials grant type requests
-func (s *OAuthBearerServer) ClientCredentials(ctx *gin.Context) {
-	grantType := ctx.PostForm("grant_type")
+func (s *OAuthBearerServer) ClientCredentials(r *ghttp.Request) {
+	grantType := r.GetString("grant_type")
 	// grant_type client_credentials variables
-	clientId := ctx.PostForm("client_id")
-	clientSecret := ctx.PostForm("client_secret")
+	clientId := r.GetString("client_id")
+	clientSecret := r.GetString("client_secret")
 	if clientId == "" || clientSecret == "" {
 		// get clientId and secret from basic authorization header
 		var err error
-		clientId, clientSecret, err = GetBasicAuthentication(ctx)
+		clientId, clientSecret, err = GetBasicAuthentication(r)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, "Not authorized")
+			r.Response.WriteJson(
+				g.Map{
+					"code": http.StatusUnauthorized,
+					"msg":  "Not authorized",
+				})
 			return
 		}
 	}
-	scope := ctx.PostForm("scope")
+	scope := r.GetString("scope")
 	// grant_type refresh_token
-	refreshToken := ctx.PostForm("refresh_token")
-	code, resp := s.generateTokenResponse(grantType, clientId, clientSecret, refreshToken, scope, "", "", ctx.Request)
-	ctx.JSON(code, resp)
+	refreshToken := r.GetString("refresh_token")
+	code, resp := s.generateTokenResponse(grantType, clientId, clientSecret, refreshToken, scope, "", "", r.Request)
+	if code == http.StatusOK {
+		r.Response.WriteJson(
+			g.Map{
+				"code":          code,
+				"TokenResponse": resp,
+			})
+	} else {
+		r.Response.WriteJson(
+			g.Map{
+				"code": code,
+				"msg":  resp,
+			})
+	}
+
 }
 
 // AuthorizationCode manages authorization code grant type requests for the phase two of the authorization process
-func (s *OAuthBearerServer) AuthorizationCode(ctx *gin.Context) {
-	grantType := ctx.PostForm("grant_type")
+func (s *OAuthBearerServer) AuthorizationCode(r *ghttp.Request) {
+	grantType := r.GetString("grant_type")
 	// grant_type client_credentials variables
-	clientId := ctx.PostForm("client_id")
-	clientSecret := ctx.PostForm("client_secret") // not mandatory
-	code := ctx.PostForm("code")
-	redirectURI := ctx.PostForm("redirect_uri") // not mandatory
-	scope := ctx.PostForm("scope")              // not mandatory
+	clientId := r.GetString("client_id")
+	clientSecret := r.GetString("client_secret") // not mandatory
+	code := r.GetString("code")
+	redirectURI := r.GetString("redirect_uri") // not mandatory
+	scope := r.GetString("scope")              // not mandatory
 	if clientId == "" {
 		// get clientId and secret from basic authorization header
 		var err error
-		clientId, clientSecret, err = GetBasicAuthentication(ctx)
+		clientId, clientSecret, err = GetBasicAuthentication(r)
 		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, "Not authorized")
+			r.Response.WriteJson(
+				g.Map{
+					"code": http.StatusUnauthorized,
+					"msg":  "Not authorized",
+				})
 			return
 		}
 	}
-	status, resp := s.generateTokenResponse(grantType, clientId, clientSecret, "", scope, code, redirectURI, ctx.Request)
-	ctx.JSON(status, resp)
+	status, resp := s.generateTokenResponse(grantType, clientId, clientSecret, "", scope, code, redirectURI, r.Request)
+	if status == http.StatusOK {
+		r.Response.WriteJson(
+			g.Map{
+				"code":          code,
+				"TokenResponse": resp,
+			})
+	} else {
+		r.Response.WriteJson(
+			g.Map{
+				"code": code,
+				"msg":  resp,
+			})
+	}
 }
 
 // Generate token response

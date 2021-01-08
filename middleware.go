@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gogf/gf/frame/g"
+	"github.com/gogf/gf/net/ghttp"
 )
 
 // BearerAuthentication middleware for Gin-Gonic
@@ -27,26 +28,30 @@ func NewBearerAuthentication(secretKey string, formatter TokenSecureFormatter) *
 
 // Authorize is the OAuth 2.0 middleware for Gin-Gonic resource server.
 // Authorize creates a BearerAuthentication middlever and return the Authorize method.
-func Authorize(secretKey string, formatter TokenSecureFormatter) gin.HandlerFunc {
+func Authorize(secretKey string, formatter TokenSecureFormatter) ghttp.HandlerFunc {
 	return NewBearerAuthentication(secretKey, nil).Authorize
 }
 
 // Authorize verifies the bearer token authorizing or not the request.
 // Token is retreived from the Authorization HTTP header that respects the format
 // Authorization: Bearer {access_token}
-func (ba *BearerAuthentication) Authorize(ctx *gin.Context) {
-	auth := ctx.Request.Header.Get("Authorization")
+func (ba *BearerAuthentication) Authorize(r *ghttp.Request) {
+	auth := r.Request.Header.Get("Authorization")
 	token, err := ba.checkAuthorizationHeader(auth)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, "Not authorized: "+err.Error())
-		ctx.AbortWithStatus(401)
+		r.Response.WriteJson(
+			g.Map{
+				"code": http.StatusUnauthorized,
+				"msg":  "Not authorized: " + err.Error(),
+			})
+		r.ExitAll()
 	} else {
-		ctx.Set("oauth.credential", token.Credential)
-		ctx.Set("oauth.claims", token.Claims)
-		ctx.Set("oauth.scope", token.Scope)
-		ctx.Set("oauth.tokentype", token.TokenType)
-		ctx.Set("oauth.accesstoken", auth[7:])
-		ctx.Next()
+		r.SetParam("oauth.credential", token.Credential)
+		r.SetParam("oauth.claims", token.Claims)
+		r.SetParam("oauth.scope", token.Scope)
+		r.SetParam("oauth.tokentype", token.TokenType)
+		r.SetParam("oauth.accesstoken", auth[7:])
+		r.Middleware.Next()
 	}
 }
 

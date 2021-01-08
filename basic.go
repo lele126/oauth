@@ -1,13 +1,16 @@
 package oauth
 
-import "github.com/gin-gonic/gin"
-import "strings"
-import "encoding/base64"
-import "errors"
+import (
+	"encoding/base64"
+	"errors"
+	"strings"
+
+	"github.com/gogf/gf/net/ghttp"
+)
 
 // GetBasicAuthentication get username and password from Authorization header
-func GetBasicAuthentication(ctx *gin.Context) (username, password string, err error) {
-	if header := ctx.Request.Header.Get("Authorization"); header != "" {
+func GetBasicAuthentication(r *ghttp.Request) (username, password string, err error) {
+	if header := r.Request.Header.Get("Authorization"); header != "" {
 		if strings.ToLower(header[:6]) == "basic " {
 			// decode header value
 			value, err := base64.StdEncoding.DecodeString(header[6:])
@@ -24,8 +27,8 @@ func GetBasicAuthentication(ctx *gin.Context) (username, password string, err er
 }
 
 // Check Basic Autrhorization header credentials
-func CheckBasicAuthentication(username, password string, ctx *gin.Context) error {
-	u, p, err := GetBasicAuthentication(ctx)
+func CheckBasicAuthentication(username, password string, r *ghttp.Request) error {
+	u, p, err := GetBasicAuthentication(r)
 	if err != nil {
 		return err
 	} else {
